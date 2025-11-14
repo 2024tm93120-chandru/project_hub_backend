@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Project Hub Voice Assistant (EN + TA)</title>
+</head>
+<body>
+  <h2>Project Hub Assistant — Speak (English / Tamil)</h2>
+  <select id="lang">
+    <option value="en">English</option>
+    <option value="ta">Tamil</option>
+  </select>
+  <button id="start">Start Listening</button>
+  <pre id="transcript"></pre>
+  <pre id="response"></pre>
+
+<script>
+const startBtn = document.getElementById('start');
+const transcriptEl = document.getElementById('transcript');
+const responseEl = document.getElementById('response');
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SpeechRecognition) {
+  alert("Your browser does not support Web Speech API. Use Chrome.");
+}
+
+startBtn.onclick = () => {
+  const lang = document.getElementById('lang').value;
+  const rec = new SpeechRecognition();
+  rec.lang = (lang === 'ta') ? 'ta-IN' : 'en-US';
+  rec.interimResults = false;
+  rec.onresult = async (ev) => {
+    const text = ev.results[0][0].transcript;
+    transcriptEl.textContent = "You: " + text;
+    // send to backend
+    const resp = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({text, language: lang})
+    });
+    const j = await resp.json();
+    responseEl.textContent = "Assistant: " + j.reply;
+    // speak reply
+    const utt = new SpeechSynthesisUtterance(j.reply);
+    utt.lang = (lang === 'ta') ? 'ta-IN' : 'en-US';
+    window.speechSynthesis.speak(utt);
+  };
+  rec.onerror = (e) => {
+    console.error(e);
+    transcriptEl.textContent = "Error: " + e.error;
+  };
+  rec.start();
+}
+</script>
+</body>
+</html>
